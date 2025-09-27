@@ -55,18 +55,16 @@ jobs:
       - name: Build direct-ip.srs
         run: |
           echo "Building direct-ip.srs..."
-          # 下载和复制所有 IP 规则文件到临时目录
           wget -P ./rules/direct-ip -i ./rule-list-ip.txt
           cp ./direct-ip.json ./rules/direct-ip/
           
-          # 修正：动态生成一个主入口 json 文件，用于导入目录下的所有规则
+          # 修正：使用 jq 将所有 json 文件中的 "rules" 数组合并成一个
           cd ./rules/direct-ip
-          # 查找所有 .json 文件名，并用 jq 工具生成一个包含 "imports" 数组的 json 文件
-          find . -name "*.json" -print0 | xargs -0 jq -s '{ "version": 1, "rules": [], "imports": . }' > entry-ip.json
+          # -s: 将所有json文件读入一个数组 | map(.rules): 提取每个文件的rules数组 | add: 将多个rules数组合并成一个 | {version..., rules...}: 按最终格式包装
+          jq -s 'map(.rules) | add | { "version": 1, "rules": . }' *.json > entry-ip.json
           cd ../..
           
-          echo "Compiling all IP rules from entry file..."
-          # 编译这个新生成的主入口文件
+          echo "Compiling all IP rules from merged entry file..."
           ./sing-box rule-set compile ./rules/direct-ip/entry-ip.json -o direct-ip.srs
           echo "direct-ip.srs built successfully."
 
@@ -74,17 +72,15 @@ jobs:
       - name: Build direct-domain.srs
         run: |
           echo "Building direct-domain.srs..."
-          # 下载和复制所有域名规则文件到临时目录
           wget -P ./rules/direct-domain -i ./rule-list.txt
           cp ./direct-domain.json ./rules/direct-domain/
 
-          # 修正：为域名规则动态生成主入口 json 文件
+          # 修正：使用 jq 合并所有域名规则
           cd ./rules/direct-domain
-          find . -name "*.json" -print0 | xargs -0 jq -s '{ "version": 1, "rules": [], "imports": . }' > entry-domain.json
+          jq -s 'map(.rules) | add | { "version": 1, "rules": . }' *.json > entry-domain.json
           cd ../..
           
-          echo "Compiling all domain rules from entry file..."
-          # 编译这个新生成的主入口文件
+          echo "Compiling all domain rules from merged entry file..."
           ./sing-box rule-set compile ./rules/direct-domain/entry-domain.json -o direct-domain.srs
           echo "direct-domain.srs built successfully."
 
