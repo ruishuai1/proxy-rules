@@ -89,8 +89,7 @@ jobs:
         run: |
           echo "Building proxy rules..."
           ./sing-box rule-set compile ./proxy-domain.json -o proxy-domain.srs
-      #    ./sing-box rule-set compile ./proxy-ip.json -o proxy-ip.srs
-          echo "Proxy rules built successfully."
+            echo "Proxy rules built successfully."
 
       # 步骤7：提交所有生成的 .srs 文件到仓库
       - name: Commit and push generated files
