@@ -1,0 +1,107 @@
+# 工作流名称
+name: Build and Update Sing-box Rulesets
+
+# 工作流触发条件
+on:
+  # 允许在 GitHub Actions 页面手动触发此工作流
+  workflow_dispatch:
+
+  # 设置定时任务 (使用 CRON 表达式)
+  schedule:
+    # 这里的 '0 21 * * *' 代表 UTC 时间的晚上 21:00
+    # 这对应北京时间 (UTC+8) 的第二天早上 5:00
+    - cron: '0 21 * * *'
+  
+  # 当 main 分支有 push 事件时也触发 (可选)
+  push:
+    branches:
+      - main
+    paths:
+      - '**.json'
+      - '**.txt'
+
+# 定义任务
+jobs:
+  build-rulesets:
+    # 使用最新的 Ubuntu 虚拟机环境
+    runs-on: ubuntu-latest
+
+    # 定义任务中的各个步骤
+    steps:
+      # 步骤1：检出你的仓库代码
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 步骤2：下载并设置 sing-box 编译工具
+      - name: Download and setup sing-box
+        run: |
+          echo "Fetching the latest sing-box version..."
+          LATEST_URL=$(curl -s "https://api.github.com/repos/SagerNet/sing-box/releases/latest" | jq -r '.assets[] | .browser_download_url' | grep 'linux-amd64.tar.gz')
+          echo "Downloading from: $LATEST_URL"
+          wget -O sing-box.tar.gz "$LATEST_URL"
+          tar -xzf sing-box.tar.gz
+          mv sing-box-*/sing-box ./sing-box
+          chmod +x ./sing-box
+          echo "sing-box setup complete. Version:"
+          ./sing-box version
+
+      # 步骤3：创建用于存放临时规则文件的目录
+      - name: Create temporary rule directories
+        run: |
+          mkdir -p ./rules/direct-ip
+          mkdir -p ./rules/direct-domain
+
+      # 步骤4：构建 direct-ip.srs
+      - name: Build direct-ip.srs
+        run: |
+          echo "Building direct-ip.srs..."
+          wget -P ./rules/direct-ip -i ./rule-list-ip.txt
+          cp ./direct-ip.json ./rules/direct-ip/
+          
+          # 修正：使用 jq 将所有 json 文件中的 "rules" 数组合并成一个
+          cd ./rules/direct-ip
+          # -s: 将所有json文件读入一个数组 | map(.rules): 提取每个文件的rules数组 | add: 将多个rules数组合并成一个 | {version..., rules...}: 按最终格式包装
+          jq -s 'map(.rules) | add | { "version": 1, "rules": . }' *.json > entry-ip.json
+          cd ../..
+          
+          echo "Compiling all IP rules from merged entry file..."
+          ./sing-box rule-set compile ./rules/direct-ip/entry-ip.json -o direct-ip.srs
+          echo "direct-ip.srs built successfully."
+
+      # 步骤5：构建 direct-domain.srs
+      - name: Build direct-domain.srs
+        run: |
+          echo "Building direct-domain.srs..."
+          wget -P ./rules/direct-domain -i ./rule-list.txt
+          cp ./direct-domain.json ./rules/direct-domain/
+
+          # 修正：使用 jq 合并所有域名规则
+          cd ./rules/direct-domain
+          jq -s 'map(.rules) | add | { "version": 1, "rules": . }' *.json > entry-domain.json
+          cd ../..
+          
+          echo "Compiling all domain rules from merged entry file..."
+          ./sing-box rule-set compile ./rules/direct-domain/entry-domain.json -o direct-domain.srs
+          echo "direct-domain.srs built successfully."
+
+      # 步骤6：构建 proxy rules (此步骤无需修改)
+      - name: Build proxy rules
+        run: |
+          echo "Building proxy rules..."
+          ./sing-box rule-set compile ./proxy-domain.json -o proxy-domain.srs
+      #    ./sing-box rule-set compile ./proxy-ip.json -o proxy-ip.srs
+          echo "Proxy rules built successfully."
+
+      # 步骤7：提交所有生成的 .srs 文件到仓库
+      - name: Commit and push generated files
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add direct-ip.srs direct-domain.srs proxy-domain.srs proxy-ip.srs
+          if git diff --staged --quiet; then
+            echo "No changes detected. Nothing to commit."
+          else
+            git commit -m "chore(bot): Auto update sing-box rulesets"
+            git push
+            echo "New rulesets have been committed and pushed to the repository."
+          fi
