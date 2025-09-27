@@ -86,10 +86,10 @@ jobs:
 
       # 步骤6：构建 proxy rules (此步骤无需修改)
       - name: Build proxy rules
-        run: |
+         run: |
           echo "Building proxy rules..."
           ./sing-box rule-set compile ./proxy-domain.json -o proxy-domain.srs
-          ./sing-box rule-set compile ./proxy-ip.json -o proxy-ip.srs
+      #    ./sing-box rule-set compile ./proxy-ip.json -o proxy-ip.srs
           echo "Proxy rules built successfully."
 
       # 步骤7：提交所有生成的 .srs 文件到仓库
