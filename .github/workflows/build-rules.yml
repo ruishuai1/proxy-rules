@@ -37,11 +37,16 @@ jobs:
       # 步骤2：下载并设置 sing-box 编译工具
       - name: Download and setup sing-box
         run: |
-          echo "Downloading sing-box..."
-          # 从 GitHub Releases 下载最新的稳定版 sing-box (请根据需要更新版本号)
-          wget -O sing-box.tar.gz "https://github.com/SagerNet/sing-box/releases/download/v1.9.0-rc.5/sing-box-1.9.0-rc.5-linux-amd64.tar.gz"
+          echo "Fetching the latest sing-box version..."
+          # 使用 GitHub API 获取最新 release 的信息，并用 jq 和 grep 筛选出 linux-amd64 的下载链接
+          LATEST_URL=$(curl -s "https://api.github.com/repos/SagerNet/sing-box/releases/latest" | jq -r '.assets[] | .browser_download_url' | grep 'linux-amd64.tar.gz')
+          
+          echo "Downloading from: $LATEST_URL"
+          # 使用获取到的最新链接进行下载
+          wget -O sing-box.tar.gz "$LATEST_URL"
+          
           tar -xzf sing-box.tar.gz
-          # 将解压后的可执行文件移动到当前目录，方便后续直接调用
+          # 使用通配符，不再关心具体的版本号目录
           mv sing-box-*/sing-box ./sing-box
           chmod +x ./sing-box
           echo "sing-box setup complete. Version:"
