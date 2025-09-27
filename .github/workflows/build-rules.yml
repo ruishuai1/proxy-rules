@@ -86,7 +86,7 @@ jobs:
 
       # 步骤6：构建 proxy rules (此步骤无需修改)
       - name: Build proxy rules
-         run: |
+        run: |
           echo "Building proxy rules..."
           ./sing-box rule-set compile ./proxy-domain.json -o proxy-domain.srs
       #    ./sing-box rule-set compile ./proxy-ip.json -o proxy-ip.srs
