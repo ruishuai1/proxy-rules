@@ -68,7 +68,7 @@ jobs:
 
           echo "Merging IP rules..."
           jq -s '
-            map(select(.rules)) |        # 过滤不带 rules 的 JSON
+            map(select(.rules)) |
             map(.rules) |
             add |
             { "version": 1, "rules": . }
@@ -109,6 +109,15 @@ jobs:
           ./sing-box rule-set compile ./rules/direct-domain/entry-domain.json -o direct-domain.srs
 
       # -------------------------
+      # Build direct-emby.srs
+      # -------------------------
+      - name: Build direct-emby.srs
+        run: |
+          echo "Compiling direct-emby.srs..."
+          ./sing-box rule-set compile ./direct-emby.json -o direct-emby.srs
+          echo "direct-emby.srs built successfully."
+
+      # -------------------------
       # Build proxy-domain.srs
       # -------------------------
       - name: Build proxy-domain.srs
@@ -124,7 +133,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add direct-ip.srs direct-domain.srs proxy-domain.srs
+          git add direct-ip.srs direct-domain.srs direct-emby.srs proxy-domain.srs
 
           if git diff --staged --quiet; then
             echo "No changes to commit."
