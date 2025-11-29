@@ -3,13 +3,10 @@
   "rules": [
     {
       "domain": [
-        "emby-pro.hohai.eu.org",
         "emby-cm.hohai.eu.org",
         "emby-cu.hohai.eu.org",
         "emby-ct.hohai.eu.org",
         "uhebs.emby.my",
-        "link00.okemby.org",
-        "link01.okemby.org",
         "emby-test1.hohai.eu.org",
         "emby-test2.hohai.eu.org",
         "emby-test3.hohai.eu.org"
